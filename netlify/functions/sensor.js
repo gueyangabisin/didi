@@ -1,15 +1,12 @@
+import { createClient } from "@supabase/supabase-js";
+
 // ===============================
-// SENSOR MEMORY (SHORT-TERM)
+// SUPABASE CLIENT
 // ===============================
-let sensorMemory = {
-  temp: null,
-  hum: null,
-  gas_raw: null,
-  temp_state: null,
-  hum_state: null,
-  gas_state: null,
-  updated_at: null
-};
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 // ===============================
 // INTERPRETASI SENSOR (SYARAF)
@@ -53,7 +50,7 @@ export const handler = async (event) => {
 
   try {
     // ===========================
-    // POST → UPDATE MEMORY
+    // POST → SAVE TO DATABASE
     // ===========================
     if (event.httpMethod === "POST") {
       const data = JSON.parse(event.body);
@@ -66,37 +63,53 @@ export const handler = async (event) => {
         throw new Error("Data wajib: temp, hum, gas_raw");
       }
 
-      // Interpretasi (syaraf sensorik)
+      // Interpretasi
       const interpreted = interpretSensor(data);
 
-      // Simpan ke memori
-      sensorMemory = {
+      const payload = {
+        id: 1, // <<< SELALU SATU BARIS
         temp: data.temp,
         hum: data.hum,
         gas_raw: data.gas_raw,
-        ...interpreted,
+        temp_state: interpreted.temp_state,
+        hum_state: interpreted.hum_state,
+        gas_state: interpreted.gas_state,
         updated_at: new Date().toISOString()
       };
+
+      const { error } = await supabase
+        .from("sensor_latest")
+        .upsert(payload);
+
+      if (error) throw error;
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           status: "OK",
-          message: "Sensor data updated",
-          data: sensorMemory
+          message: "Sensor data saved",
+          data: payload
         })
       };
     }
 
     // ===========================
-    // GET → READ MEMORY
+    // GET → READ FROM DATABASE
     // ===========================
     if (event.httpMethod === "GET") {
+      const { data, error } = await supabase
+        .from("sensor_latest")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
+      if (error) throw error;
+
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(sensorMemory)
+        body: JSON.stringify(data)
       };
     }
 
