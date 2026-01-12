@@ -1,5 +1,3 @@
-// Variabel sementara (akan reset jika server idle)
-let sensorData = { temp: 0, hum: 0, gas: 0, lastUpdate: "Belum ada data" };
 
 export const handler = async (event) => {
   const headers = {
@@ -25,7 +23,7 @@ export const handler = async (event) => {
       global.sensorData = {
         temp: parseFloat(data.temp),
         hum: parseFloat(data.hum),
-        gas: data.gas || 0,
+        gas_raw: data.gas_raw || 0,
         lastUpdate: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
       };
 
@@ -51,4 +49,5 @@ export const handler = async (event) => {
       body: JSON.stringify({ status: "Error", message: error.message }) 
     };
   }
+
 };
