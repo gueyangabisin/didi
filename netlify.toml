@@ -6,9 +6,14 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
 
-[[edge_functions]]
-path = "/edge/didi-nerve"
-function = "didi-nerve"
+[functions]
+  directory = "netlify/functions"
+
+[[functions.cron]]
+  function = "fetchForXiaoZhi"
+  schedule = "* * * * *" # setiap 1 menit
+
+
 
 
 
