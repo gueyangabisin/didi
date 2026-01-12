@@ -5,4 +5,10 @@
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+
+[[edge_functions]]
+path = "/edge/didi-nerve"
+function = "didi-nerve"
+
+
   status = 200
