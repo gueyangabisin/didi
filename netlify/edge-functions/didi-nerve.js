@@ -1,13 +1,17 @@
 export default async (request, context) => {
   try {
-    // Ambil KV (Edge Config)
     const store = context.edgeConfig;
 
-    // Ambil data sensor terakhir
-    const sensor = await store.get("latest_sensor");
+    if (!store) {
+      return new Response(
+        JSON.stringify({ error: "Edge Config belum terhubung ke site" }),
+        { status: 500 }
+      );
+    }
 
-    // Jika belum ada data sensor
-    if (!sensor) {
+    const sensorRaw = await store.get("latest_sensor");
+
+    if (!sensorRaw) {
       return new Response(
         JSON.stringify({
           context: "Saya belum bisa merasakan lingkungan karena belum ada data sensor."
@@ -16,10 +20,8 @@ export default async (request, context) => {
       );
     }
 
-    // Parse data sensor
-    const data = JSON.parse(sensor);
+    const data = JSON.parse(sensorRaw);
 
-    // Buat narasi lingkungan (INI SARAFNYA)
     const contextText = `
 Kondisi lingkungan saat ini:
 - Suhu: ${data.temp}°C
@@ -32,15 +34,13 @@ saat menjawab pertanyaan pengguna.
 `.trim();
 
     return new Response(
-      JSON.stringify({
-        context: contextText
-      }),
+      JSON.stringify({ context: contextText }),
       { headers: { "Content-Type": "application/json" } }
     );
 
-  } catch (err) {
+  } catch (e) {
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: e.message }),
       { status: 500 }
     );
   }
