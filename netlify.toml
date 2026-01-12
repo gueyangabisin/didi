@@ -9,9 +9,7 @@
 [functions]
   directory = "netlify/functions"
 
-[[functions.cron]]
-  function = "fetchForXiaoZhi"
-  schedule = "* * * * *" # setiap 1 menit
+
 
 
 
