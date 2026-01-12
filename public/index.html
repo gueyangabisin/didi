@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Didi Sensor Station</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; }
+        .btn-update { background: #28a745; }
+        .btn-get { background: #007bff; }
+        #log { background: #333; color: #0f0; padding: 15px; border-radius: 5px; height: 150px; overflow-y: auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h2>Didi Sensor Station - Dashboard</h2>
+    
+    <div class="card">
+        <h3>Simulasi Update (Seakan ESP32)</h3>
+        Suhu: <input type="number" id="temp" value="28"> 
+        Kelembaban: <input type="number" id="hum" value="70"> 
+        Gas: <input type="number" id="gas" value="150">
+        <button class="btn btn-update" onclick="updateData()">Kirim ke Server</button>
+    </div>
+
+    <div class="card">
+        <h3>Data Saat Ini (Seakan DeepSeek)</h3>
+        <button class="btn btn-get" onclick="getData()">Cek Data Terbaru</button>
+        <div id="display">Klik tombol untuk memuat data...</div>
+    </div>
+
+    <div class="card">
+        <h3>Log Sistem / Error Handling</h3>
+        <div id="log">Siap menerima perintah...</div>
+    </div>
+
+    <script>
+        const API_URL = "/api/sensor";
+
+        async function updateData() {
+            const body = {
+                temp: document.getElementById('temp').value,
+                hum: document.getElementById('hum').value,
+                gas: document.getElementById('gas').value
+            };
+            try {
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+                const json = await res.json();
+                addLog(`Update: ${json.status} - ${json.message}`);
+            } catch (e) { addLog("Error Update: " + e.message); }
+        }
+
+        async function getData() {
+            try {
+                const res = await fetch(API_URL);
+                const json = await res.json();
+                document.getElementById('display').innerHTML = `
+                    <b>Suhu:</b> ${json.temp}°C | <b>Hum:</b> ${json.hum}% | <b>Gas:</b> ${json.gas} <br>
+                    <small>Update Terakhir: ${json.lastUpdate}</small>`;
+                addLog("Get Data: Success");
+            } catch (e) { addLog("Error Get: " + e.message); }
+        }
+
+        function addLog(msg) {
+            const log = document.getElementById('log');
+            log.innerHTML += `> ${new Date().toLocaleTimeString()}: ${msg}<br>`;
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>
