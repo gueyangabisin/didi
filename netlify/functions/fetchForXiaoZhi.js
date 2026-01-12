@@ -1,26 +1,17 @@
 import { handler as sensorsHandler } from "./sensors.js";
-import fetch from "node-fetch"; // pastikan node 18+ atau install node-fetch
+import fetch from "node-fetch"; // pastikan node 18+ atau sudah ada fetch global
 
-const XIAOZHI_KB_ENDPOINT = "https://xiaozhi.ai/api/knowledge"; // ganti sesuai endpoint asli
-const XIAOZHI_API_TOKEN = "<TOKEN_XIAOZHI>"; // ganti dengan token kamu
+const XIAOZHI_WS = "wss://api.xiaozhi.me/mcp/?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjc2MzY2MiwiYWdlbnRJZCI6MTMzMzM3MCwiZW5kcG9pbnRJZCI6ImFnZW50XzEzMzMzNzAiLCJwdXJwb3NlIjoibWNwLWVuZHBvaW50IiwiaWF0IjoxNzY4MjU4NTA3LCJleHAiOjE3OTk4MTYxMDd9.kR8A3g4tHdWc_tf12Y5YpeMlz4nYdAoClPV3mrUtWjrkpKgouY39A_iut4ZJfwkgy2BUrSMf5lqeq5tJvwI-YA";
 
-export const handler = async (event) => {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Content-Type": "application/json"
-  };
-
-  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
-
+export const scheduled = async (event) => {
   try {
-    // Ambil data sensor terakhir
+    // Ambil data sensor terbaru
     const sensorsRes = await sensorsHandler({ httpMethod: "GET" });
     const sensorsData = JSON.parse(sensorsRes.body);
 
     if (sensorsData.status === "NO_DATA") {
-      return { statusCode: 200, headers, body: JSON.stringify({ status: "NO_DATA", content: "Belum ada data sensor." }) };
+      console.log("Belum ada data sensor.");
+      return;
     }
 
     const content = `Kondisi lingkungan saat ini:
@@ -29,21 +20,23 @@ export const handler = async (event) => {
 - Intensitas gas: ${sensorsData.gas_raw} (${sensorsData.gas_state})
 Terakhir diperbarui: ${sensorsData.updated_at}`;
 
-    // === Push ke XiaoZhi Knowledge Base ===
-    const xzRes = await fetch(XIAOZHI_KB_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${?token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjc2MzY2MiwiYWdlbnRJZCI6MTMzMzM3MCwiZW5kcG9pbnRJZCI6ImFnZW50XzEzMzMzNzAiLCJwdXJwb3NlIjoibWNwLWVuZHBvaW50IiwiaWF0IjoxNzY4MjU4NTA3LCJleHAiOjE3OTk4MTYxMDd9.kR8A3g4tHdWc_tf12Y5YpeMlz4nYdAoClPV3mrUtWjrkpKgouY39A_iut4ZJfwkgy2BUrSMf5lqeq5tJvwI-YA}`
-      },
-      body: JSON.stringify({ content })
+    // ===== Push ke XiaoZhi via WebSocket =====
+    // Kita harus connect ke WSS endpoint karena XiaoZhi sekarang pakai WebSocket
+    // Bisa pakai 'ws' module
+    const WebSocket = (await import("ws")).default;
+    const ws = new WebSocket(XIAOZHI_WS);
+
+    ws.on("open", () => {
+      ws.send(JSON.stringify({ content }));
+      ws.close();
+      console.log("Data berhasil dikirim ke XiaoZhi");
     });
 
-    const result = await xzRes.json();
-
-    return { statusCode: 200, headers, body: JSON.stringify({ status: "OK", content, xiaozhiResult: result }) };
+    ws.on("error", (err) => {
+      console.error("Error mengirim ke XiaoZhi:", err);
+    });
 
   } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ status: "ERROR", message: err.message }) };
+    console.error("Scheduled function error:", err);
   }
 };
