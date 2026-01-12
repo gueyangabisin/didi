@@ -41,22 +41,13 @@ export const handler = async (event) => {
     "Content-Type": "application/json"
   };
 
-  // ===============================
-  // PREFLIGHT (CORS)
-  // ===============================
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers };
-  }
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
 
   try {
-
-    // ===============================
-    // POST → ESP KIRIM DATA
-    // ===============================
+    // ===== POST → update sensor =====
     if (event.httpMethod === "POST") {
       const data = JSON.parse(event.body || "{}");
 
-      // Validasi payload
       if (
         typeof data.temp !== "number" ||
         typeof data.hum !== "number" ||
@@ -72,10 +63,8 @@ export const handler = async (event) => {
         };
       }
 
-      // Interpretasi sensor
       const interpreted = interpretSensor(data);
 
-      // Simpan ke memory (sementara)
       sensorMemory = {
         temp: data.temp,
         hum: data.hum,
@@ -87,31 +76,19 @@ export const handler = async (event) => {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({
-          status: "OK",
-          message: "Sensor data updated",
-          data: sensorMemory
-        })
+        body: JSON.stringify({ status: "OK", message: "Sensor data updated", data: sensorMemory })
       };
     }
 
-    // ===============================
-    // GET → DASHBOARD / AI BACA DATA
-    // ===============================
+    // ===== GET → dashboard / fetchForXiaoZhi =====
     if (event.httpMethod === "GET") {
-
-      // kalau belum ada data sama sekali
       if (!sensorMemory.updated_at) {
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify({
-            status: "NO_DATA",
-            message: "Belum ada data sensor"
-          })
+          body: JSON.stringify({ status: "NO_DATA" })
         };
       }
-
       return {
         statusCode: 200,
         headers,
@@ -119,26 +96,13 @@ export const handler = async (event) => {
       };
     }
 
-    // ===============================
-    // METHOD TIDAK DIDUKUNG
-    // ===============================
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({
-        status: "ERROR",
-        message: "Method not allowed"
-      })
+      body: JSON.stringify({ status: "ERROR", message: "Method not allowed" })
     };
 
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        status: "ERROR",
-        message: err.message
-      })
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ status: "ERROR", message: err.message }) };
   }
 };
