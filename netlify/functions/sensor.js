@@ -20,13 +20,6 @@ export const handler = async (event) => {
         throw new Error("Format data salah! Harus ada temp dan hum.");
       }
 
-      global.sensorData = {
-        temp: parseFloat(data.temp),
-        hum: parseFloat(data.hum),
-        gas_raw: data.gas_raw || 0,
-        lastUpdate: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
-      };
-
       return { 
         statusCode: 200, 
         headers, 
@@ -36,7 +29,6 @@ export const handler = async (event) => {
 
     // JALUR GET (Ambil Data untuk DeepSeek/Dashboard)
     if (event.httpMethod === "GET") {
-      const currentData = global.sensorData || sensorData;
       return { statusCode: 200, headers, body: JSON.stringify(currentData) };
     }
 
@@ -51,3 +43,4 @@ export const handler = async (event) => {
   }
 
 };
+
