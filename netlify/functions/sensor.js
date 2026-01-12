@@ -1,3 +1,6 @@
+// ===============================
+// SENSOR MEMORY (VOLATILE)
+// ===============================
 let sensorMemory = {
   temp: null,
   hum: null,
@@ -8,6 +11,9 @@ let sensorMemory = {
   updated_at: null
 };
 
+// ===============================
+// INTERPRETASI SENSOR
+// ===============================
 function interpretSensor(data) {
   return {
     temp_state:
@@ -24,6 +30,9 @@ function interpretSensor(data) {
   };
 }
 
+// ===============================
+// NETLIFY FUNCTION HANDLER
+// ===============================
 export const handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
@@ -32,26 +41,45 @@ export const handler = async (event) => {
     "Content-Type": "application/json"
   };
 
+  // ===============================
+  // PREFLIGHT (CORS)
+  // ===============================
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers };
   }
 
   try {
+
+    // ===============================
+    // POST → ESP KIRIM DATA
+    // ===============================
     if (event.httpMethod === "POST") {
       const data = JSON.parse(event.body || "{}");
 
+      // Validasi payload
       if (
         typeof data.temp !== "number" ||
         typeof data.hum !== "number" ||
         typeof data.gas_raw !== "number"
       ) {
-        throw new Error("Payload invalid");
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            status: "ERROR",
+            message: "Payload harus berisi temp, hum, gas_raw (number)"
+          })
+        };
       }
 
+      // Interpretasi sensor
       const interpreted = interpretSensor(data);
 
+      // Simpan ke memory (sementara)
       sensorMemory = {
-        ...data,
+        temp: data.temp,
+        hum: data.hum,
+        gas_raw: data.gas_raw,
         ...interpreted,
         updated_at: new Date().toISOString()
       };
@@ -61,12 +89,29 @@ export const handler = async (event) => {
         headers,
         body: JSON.stringify({
           status: "OK",
-          received: sensorMemory
+          message: "Sensor data updated",
+          data: sensorMemory
         })
       };
     }
 
+    // ===============================
+    // GET → DASHBOARD / AI BACA DATA
+    // ===============================
     if (event.httpMethod === "GET") {
+
+      // kalau belum ada data sama sekali
+      if (!sensorMemory.updated_at) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            status: "NO_DATA",
+            message: "Belum ada data sensor"
+          })
+        };
+      }
+
       return {
         statusCode: 200,
         headers,
@@ -74,13 +119,26 @@ export const handler = async (event) => {
       };
     }
 
-    return { statusCode: 405, headers };
+    // ===============================
+    // METHOD TIDAK DIDUKUNG
+    // ===============================
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({
+        status: "ERROR",
+        message: "Method not allowed"
+      })
+    };
 
   } catch (err) {
     return {
-      statusCode: 400,
+      statusCode: 500,
       headers,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({
+        status: "ERROR",
+        message: err.message
+      })
     };
   }
 };
