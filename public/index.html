@@ -35,38 +35,54 @@
     </div>
 
     <script>
-        const API_URL = "/api/sensor";
+  const API_URL = "/api/sensor";
 
-        async function updateData() {
-            const body = {
-                temp: document.getElementById('temp').value,
-                hum: document.getElementById('hum').value,
-                gas_raw: document.getElementById('gas_raw').value
-            };
-            try {
-                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
-                const json = await res.json();
-                addLog(`Update: ${json.status} - ${json.message}`);
-            } catch (e) { addLog("Error Update: " + e.message); }
-        }
+  async function updateData() {
+    const body = {
+      temp: Number(document.getElementById('temp').value),
+      hum: Number(document.getElementById('hum').value),
+      gas_raw: Number(document.getElementById('gas_raw').value)
+    };
 
-        async function getData() {
-            try {
-                const res = await fetch(API_URL);
-                const json = await res.json();
-                document.getElementById('display').innerHTML = `
-                    <b>Suhu:</b> ${json.temp}°C | <b>Hum:</b> ${json.hum}% | <b>Gas:</b> ${json.gas_raw} <br>
-                    <small>Update Terakhir: ${json.lastUpdate}</small>`;
-                addLog("Get Data: Success");
-            } catch (e) { addLog("Error Get: " + e.message); }
-        }
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      addLog(`Update: ${json.status} - ${json.message}`);
+    } catch (e) {
+      addLog("Error Update: " + e.message);
+    }
+  }
 
-        function addLog(msg) {
-            const log = document.getElementById('log');
-            log.innerHTML += `> ${new Date().toLocaleTimeString()}: ${msg}<br>`;
-            log.scrollTop = log.scrollHeight;
-        }
-    </script>
+  async function getData() {
+    try {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+
+      document.getElementById('display').innerHTML = `
+        <b>Suhu:</b> ${json.temp}°C (${json.temp_state})<br>
+        <b>Kelembaban:</b> ${json.hum}% (${json.hum_state})<br>
+        <b>Gas:</b> ${json.gas_raw} (${json.gas_state})<br>
+        <small>Update Terakhir: ${new Date(json.updated_at).toLocaleString()}</small>
+      `;
+
+      addLog("Get Data: Success");
+    } catch (e) {
+      addLog("Error Get: " + e.message);
+    }
+  }
+
+  function addLog(msg) {
+    const log = document.getElementById('log');
+    log.innerHTML += `> ${new Date().toLocaleTimeString()}: ${msg}<br>`;
+    log.scrollTop = log.scrollHeight;
+  }
+</script>
+
 </body>
 
 </html>
+
